@@ -24,3 +24,23 @@ Options:
 	-h, --help
 		Show this help message and exit
 ```
+
+To test the script on one of the provided test files:
+
+```
+Rscript --vanilla CCDI-Submission_ValidatoR.R -f test_files/a_all_pass_CCDI_Submission_Template_v1.0.1.xlsx -t test_files/a_all_pass_CCDI_Submission_Template_v1.0.1.xlsx 
+```
+
+```
+The data file is being validated at this time.
+
+Process Complete.
+
+The output file can be found here: ChildhoodCancerDataInitiative-Submission_ValidatoR.R/test_files/
+```
+
+`Note: The AWS bucket checks will not work with any of the test files, as the files and their locations are fake data`
+
+
+|Message|Issue|Likely Fix|
+|-------|-----|----------|
