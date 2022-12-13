@@ -166,6 +166,7 @@ df_tavs=remove_empty(df_tavs,c('rows','cols'))
 
 #Pull out the positions where the value set names are located
 VSN=unique(df_tavs$Value.Set.Name)
+VSN=VSN[!is.na(VSN)]
 
 df_all_terms=list()
 
@@ -173,18 +174,6 @@ df_all_terms=list()
 for (VSN_indv in VSN){
     df_all_terms[[VSN_indv]] = list(filter(df_tavs,Value.Set.Name==VSN_indv)["Term"][[1]])
   }
-
-
-# 
-# #for each instance of a property, note the position on the Terms and Value Sets page, create a list for each with all accepted values.
-# for (x in 1:length(VSN)){
-#   if (!is.na(VSN[x+1])){
-#     df_all_terms[as.character(df_tavs[VSN[x],1])] = list(as.vector(df_tavs[VSN[x]:(VSN[x+1]-1),2]))
-#     
-#   }else{
-#     df_all_terms[as.character(df_tavs[VSN[x],1])] = list(as.vector(df_tavs[VSN[x]:dim(df_tavs)[1],2]))
-#   }
-# }
 
 
 ##############
@@ -281,8 +270,11 @@ for (node in nodes_present){
       
       #check for rows that have any NA's or '' blank values
       bad_rows=grep(pattern = TRUE, x = !grepl(pattern = ".", x = df_req[required_property][[1]]))
-    
-      if (length(bad_rows)>0){
+      if (required_property=="dcf_indexd_guid" & length(bad_rows)==dim(df_req)[1]){
+        bad_cols_add=grep(pattern = TRUE, x = colnames(df_req) %in% required_property)
+        bad_cols_all=c(bad_cols_all,bad_cols_add)
+        cat("\tERROR: For the node, ",node,", values still need to be generated for the required property, ", required_property,".\n", sep = "")
+      }else if (length(bad_rows)>0){
         bad_cols_add=grep(pattern = TRUE, x = colnames(df_req) %in% required_property)
         bad_cols_all=c(bad_cols_all,bad_cols_add)
         for (bad_row in bad_rows){
@@ -473,7 +465,7 @@ for (library_id in unique(df$library_id)){
 
 #For BAM, CRAM and Fastq files, we expect that all the files to have only one sample associated with them and the following properties: avg_read_length, coverage, bases, reads.
 
-cat("\n\nThis submission and subsequent submission files derived from the sequencing file template assume that FASTQ, BAM and CRAM files are single sample files, and contain all associated metadata for submission.\nIf there are any unexpected values, they will be reported below:\n----------\n")
+cat("\n\nThis submission and subsequent submission files derived from the sequencing file template assume that FASTQ, BAM and CRAM files are single sample files, and contain all associated metadata for submission.\nIf there are any unexpected values, they will be reported below:\n----------")
 
 #obtain df for seq files
 df=workbook_list['sequencing_file'][[1]]
@@ -492,12 +484,13 @@ for (file_type in file_types){
     file_url=unique(df$file_url_in_cds[file_location])
     file_name=unique(df$file_name[file_location])
     sample_id_loc=unique(grep(pattern = TRUE, x = (df$sample.sample_id %in% sample_id)))
+    sample_id_loc=sample_id_loc[grep(pattern=TRUE, x = (df$file_type[sample_id_loc] %in% file_types))]
     file_url_loc=unique(grep(pattern = TRUE, x = (df$file_url_in_cds %in% file_url)))
     file_name_loc=unique(grep(pattern = TRUE, x = (df$file_name %in% file_name)))
     
     if (length(sample_id_loc)>1){
       if (!any(sample_id_loc %in% prob_sample_id_locs)){
-        cat("WARNING: The sample, ", sample_id, ", has multiple single sample files associated with it. These could cause errors in SRA submissions if this is unexpected.\n",paste("\t",df$file_name[sample_id_loc],collapse = "\n"),"\n",sep = "")
+        cat("\nWARNING: The sample, ", sample_id, ", has multiple single sample files associated with it. These could cause errors in SRA submissions if this is unexpected.\n",paste("\t",df$file_name[sample_id_loc],collapse = "\n"),sep = "")
       }
       prob_sample_id_locs=c(prob_sample_id_locs, sample_id_loc)
     }
@@ -505,18 +498,18 @@ for (file_type in file_types){
     #if there are any urls or files 
     if (any(length(file_url_loc)>1 | length(file_name_loc)>1)){
       if (!any(file_name_loc %in% prob_file_locs)){
-      cat("WARNING: The following file, ", file_name, ", is found multiple times.\n",sep = "")
+      cat("\nWARNING: The following file, ", file_name, ", is found multiple times.",sep = "")
         sample_file_loc=unique(df$sample.sample_id[file_name_loc])
         file_url_file_loc=unique(df$file_url_in_cds[file_name_loc])
         prob_file_locs=c(prob_file_locs,file_name_loc)
         #If there are multiple samples related to a file, it will note them
         if (length(sample_file_loc)>1){
-          cat("\tERROR: There are multiple samples associated with the single sample file, ",file_name,".\n",paste("\t\t",sample_file_loc,"\n"), sep = "")
+          cat("\n\tERROR: There are multiple samples associated with the single sample file, ",file_name,".",paste("\n\t\t",sample_file_loc,collapse = ""), sep = "")
         }
         
         #If there are multiple url locations to a file, it will note them
         if(length(file_url_file_loc)>1){
-          cat("\tWARNING: There are multiple url locations associated with the file, ",file_name,".\n",paste("\t\t",file_url_file_loc,"\n"), sep = "")
+          cat("\n\tWARNING: There are multiple url locations associated with the file, ",file_name,".",paste("\n\t\t",file_url_file_loc,collapse = ""), sep = "")
         }
       }
     }  
@@ -530,24 +523,24 @@ for (file_type in file_types){
     if (file_type=="fastq"){
       SRA_checks=c(bases_check, avg_read_length_check, reads_check)
       if (any(is.na(SRA_checks))){
-        cat(paste("ERROR: The file, ",df$file_name[file_location],", is missing at least one expected value (bases, avg_read_length, number_of_reads) that is associated with an SRA submission.\n",sep = ""))
+        cat(paste("\nERROR: The file, ",df$file_name[file_location],", is missing at least one expected value (bases, avg_read_length, number_of_reads) that is associated with an SRA submission.",sep = ""))
       }
       if (!is.na(coverage_check)){
-        cat(paste("WARNING: The file, ",df$file_name[file_location],", is not expected to have a coverage value.\n",sep = ""))
+        cat(paste("\nWARNING: The file, ",df$file_name[file_location],", is not expected to have a coverage value.",sep = ""))
       }
       #for RNA-seq data, skips the checks for coverage values to be present
     }else if(tolower(df$library_strategy[file_location])=="rna-seq"){
       SRA_checks=c(bases_check, avg_read_length_check, reads_check)
       if (any(is.na(SRA_checks))){
-        cat(paste("ERROR: The file, ",df$file_name[file_location],", is missing at least one expected value (bases, avg_read_length, number_of_reads) that is associated with an SRA submission.\n",sep = ""))
+        cat(paste("\nERROR: The file, ",df$file_name[file_location],", is missing at least one expected value (bases, avg_read_length, number_of_reads) that is associated with an SRA submission.\n",sep = ""))
       }
       if (!is.na(coverage_check)){
-        cat(paste("WARNING: The file, ",df$file_name[file_location],", is not expected to have a coverage value.\n",sep = ""))
+        cat(paste("\nWARNING: The file, ",df$file_name[file_location],", is not expected to have a coverage value.",sep = ""))
       }
     }else{
       SRA_checks=c(bases_check, avg_read_length_check, coverage_check, reads_check)
       if (any(is.na(SRA_checks))){
-        cat(paste("ERROR: The file, ",df$file_name[file_location],", is missing at least one expected value (bases, avg_read_length, coverage, number_of_reads) that is associated with an SRA submission.\n",sep = ""))
+        cat(paste("\nERROR: The file, ",df$file_name[file_location],", is missing at least one expected value (bases, avg_read_length, coverage, number_of_reads) that is associated with an SRA submission.",sep = ""))
       }
     }
   }
@@ -560,97 +553,104 @@ for (file_type in file_types){
 #
 #################
 
-cat("\n\nThe following section will compare the manifest against the reported buckets and note if there are unexpected results where the file is represented equally in both sources.\nIf there are any unexpected values, they will be reported below:\n----------")
+cat("\n\nThe following section will compare the manifest against the reported buckets and note if there are unexpected results where the file is represented equally in both sources.\nIf there are any unexpected values, they will be reported below:\n----------\n")
 
 #Pull out all nodes that have the file url, denoting that there are files in the node.
 node_props=names(unlist(x = workbook_list, recursive = FALSE))
 file_nodes=node_props[grep(pattern = "file_url_in_cds", x = node_props)]
 file_nodes=unique(unlist(stri_split_fixed(str = file_nodes, pattern = ".",n = 2)))
 file_nodes=file_nodes[!grepl(pattern = "file_url_in_cds", x = file_nodes)]
+df_file=data.frame(matrix(ncol = 4,nrow = 0))
+colnames(df_file)<-c("file_size","md5sum","file_url_in_cds","type")
 
 for (node in file_nodes){
   #obtain df for files
   df=workbook_list[node][[1]]
-  cat("\n",node,"\n",sep = "")
+  df$type=node
+  df=df%>%
+    select(file_size, md5sum,file_url_in_cds,type)
+  df_file=rbind(df_file,df)
+}
   
-  #################
-  #
-  # Check file metadata
-  #
-  #################
   
-  for (row_pos in 1:dim(df)[1]){
-    if (!is.na(df$file_size[row_pos])){
-      if (df$file_size[row_pos]=="0"){
-        cat(paste("\tWARNING: The file in row ",row_pos+1,", has a size value of 0. Please make sure that this is a correct value for the file.\n",sep = ""))
-      }
-    }
-    if (!is.na(df$md5sum[row_pos])){
-      if (!stri_detect_regex(str = df$md5sum[row_pos],pattern = '^[a-f0-9]{32}$',case_insensitive=TRUE)){
-        cat(paste("\tERROR: The file in row ",row_pos+1,", has a md5sum value that does not follow the md5sum regular expression.\n",sep = ""))
-      }
+#################
+#
+# Check file metadata
+#
+#################
+
+for (row_pos in 1:dim(df_file)[1]){
+  if (!is.na(df_file$file_size[row_pos])){
+    if (df_file$file_size[row_pos]==0){
+      cat(paste("\tWARNING: The file in row ",row_pos+1,", has a size value of 0. Please make sure that this is a correct value for the file.\n",sep = ""))
     }
   }
-  
-  
-  ###############
-  #
-  # AWS bucket file check
-  #
-  ###############
-  
-  #Obtain bucket information
-  df_bucket=select(df, file_url_in_cds)%>%
-    separate(file_url_in_cds,into = c("s3","blank","bucket","the_rest"),sep = "/",extra = "merge")%>%
-    select(-s3,-blank,-the_rest)
-  df_bucket=unique(df_bucket)
-  
-  #Check to see if there is only one bucket associated with the submission. It is not required, but it is likely that there would only be one bucket.
-  if (dim(df_bucket)[1]>1){
-    cat(paste("\tWARNING: There is more than one aws bucket that is associated with this metadata file in the, ",node,", node: ", df_bucket$bucket,".\n",sep = ""))
-  }
-  
-  #Do a list of the bucket and then check the file size and name against the metadata submission.
-  for (bucket_num in 1:dim(df_bucket)[1]){
-    #pull bucket metadata
-    metadata_files=suppressMessages(suppressWarnings(system(command = paste("aws s3 ls --recursive s3://", df_bucket[bucket_num,],"/",sep = ""),intern = TRUE)))
-    
-    #fix bucket metadata to have fixed delimiters of one space
-    while (any(grepl(pattern = "  ",x = metadata_files))==TRUE){
-      metadata_files=stri_replace_all_fixed(str = metadata_files,pattern = "  ",replacement = " ")
-    }
-    
-    #Break bucket string into a data frame and clean up
-    bucket_metadata=data.frame(all_metadata=metadata_files)
-    bucket_metadata=separate(bucket_metadata, all_metadata, into = c("date","time","file_size","file_path"),sep = " ", extra = "merge")%>%
-      select(-date, -time)%>%
-      mutate(file_path=paste("s3://",df_bucket[bucket_num,],"/",file_path,sep = ""))
-    bucket_metadata$file_size=as.character(bucket_metadata$file_size)
-    df_bucket_specific=df[grep(pattern = df_bucket[bucket_num,], x = df$file_url_in_cds),]
-    
-    #For each row in the manifest for this bucket, check the contents of the bucket against the manifest.
-    for (row in 1:dim(df_bucket_specific)[1]){
-      #locate the file url
-      file_name_loc=grep(pattern = TRUE, x = bucket_metadata['file_path'][[1]] %in% df_bucket_specific[row,'file_url_in_cds'][[1]])
-      #if the file is found, find that file with the correct size
-      if (length(file_name_loc)!=0){
-        if (bucket_metadata[file_name_loc,'file_size']!=df_bucket_specific[row,'file_size'][[1]]){
-          cat(paste("\tERROR: The following file does not have the same file size found in the AWS bucket: ", df_bucket_specific[row,'file_url_in_cds'][[1]],"\n", sep = ""))
-        }
-      }else{
-        cat(paste("\tERROR: The following file is not found in the AWS bucket: ", df_bucket_specific[row,'file_url_in_cds'][[1]],"\n", sep = ""))
-      }
-    }
-    
-    #Finally, check the bucket against the manifest to determine if there are files in the bucket that are not noted in the manifest.
-    for (bucket_file in bucket_metadata$file_path){
-      bucket_value = bucket_file  %in% df_bucket_specific['file_url_in_cds'][[1]]
-      if (bucket_value==FALSE){
-        cat(paste("\tERROR: The following file is found in the AWS bucket and not the manifest that was provided: ", bucket_file,"\n", sep = ""))
-      }
+  if (!is.na(df_file$md5sum[row_pos])){
+    if (!stri_detect_regex(str = df_file$md5sum[row_pos],pattern = '^[a-f0-9]{32}$',case_insensitive=TRUE)){
+      cat(paste("\tERROR: The file in row ",row_pos+1,", has a md5sum value that does not follow the md5sum regular expression.\n",sep = ""))
     }
   }
 }
+
+
+###############
+#
+# AWS bucket file check
+#
+###############
+
+#Obtain bucket information
+df_bucket=select(df_file, file_url_in_cds)%>%
+  separate(file_url_in_cds,into = c("s3","blank","bucket","the_rest"),sep = "/",extra = "merge")%>%
+  select(-s3,-blank,-the_rest)
+df_bucket=unique(df_bucket)
+
+#Check to see if there is only one bucket associated with the submission. It is not required, but it is likely that there would only be one bucket.
+if (dim(df_bucket)[1]>1){
+  cat(paste("\tWARNING: There is more than one aws bucket that is associated with this metadata file in the, ",node,", node: ", df_bucket$bucket,".\n",sep = ""))
+}
+
+#Do a list of the bucket and then check the file size and name against the metadata submission.
+for (bucket_num in 1:dim(df_bucket)[1]){
+  #pull bucket metadata
+  metadata_files=suppressMessages(suppressWarnings(system(command = paste("aws s3 ls --recursive s3://", df_bucket[bucket_num,],"/",sep = ""),intern = TRUE)))
+  
+  #fix bucket metadata to have fixed delimiters of one space
+  while (any(grepl(pattern = "  ",x = metadata_files))==TRUE){
+    metadata_files=stri_replace_all_fixed(str = metadata_files,pattern = "  ",replacement = " ")
+  }
+  
+  #Break bucket string into a data frame and clean up
+  bucket_metadata=data.frame(all_metadata=metadata_files)
+  bucket_metadata=separate(bucket_metadata, all_metadata, into = c("date","time","file_size","file_path"),sep = " ", extra = "merge")%>%
+    select(-date, -time)%>%
+    mutate(file_path=paste("s3://",df_bucket[bucket_num,],"/",file_path,sep = ""))
+  bucket_metadata$file_size=as.character(bucket_metadata$file_size)
+  df_bucket_specific=df_file[grep(pattern = df_bucket[bucket_num,], x = df_file$file_url_in_cds),]
+  
+  #For each row in the manifest for this bucket, check the contents of the bucket against the manifest.
+  for (row in 1:dim(df_bucket_specific)[1]){
+    #locate the file url
+    file_name_loc=grep(pattern = TRUE, x = bucket_metadata['file_path'][[1]] %in% df_bucket_specific[row,'file_url_in_cds'][[1]])
+    #if the file is found, find that file with the correct size
+    if (length(file_name_loc)!=0){
+      if (bucket_metadata[file_name_loc,'file_size']!=as.character(df_bucket_specific[row,'file_size'][[1]])){
+        cat(paste("\tERROR: The following file does not have the same file size found in the AWS bucket: ", df_bucket_specific[row,'file_url_in_cds'][[1]],"\n", sep = ""))
+      }
+    }else{
+      cat(paste("\tERROR: The following file is not found in the AWS bucket: ", df_bucket_specific[row,'file_url_in_cds'][[1]],"\n", sep = ""))
+    }
+  }
+  
+  #Finally, check the bucket against the manifest to determine if there are files in the bucket that are not noted in the manifest.
+  for (bucket_file in bucket_metadata$file_path){
+    bucket_value = bucket_file  %in% df_bucket_specific['file_url_in_cds'][[1]]
+    if (!bucket_value){
+      cat(paste("\tERROR: The following file is found in the AWS bucket and not the manifest that was provided: ", bucket_file,"\n", sep = ""))
+    }
+  }
+}
+
 
 ###############
 #
@@ -675,8 +675,6 @@ for (node in nodes_present){
       }
     }
   }
-  
-  
   
   #for each linking value check to make sure there are values
   for (link_prop in link_props){
