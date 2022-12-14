@@ -243,7 +243,7 @@ for (node in nodes_present){
   df_ws=df
 
   required_properties=df_dict$Property[grepl(pattern = TRUE,x = df_dict$Required %in% node)]
-  if ("file_url_in_cds" %in% properties & "file_name" %in% properties & "file_size" %in% properties & "md5sum" %in% properties){
+  if ("file_url_in_cds" %in% properties & "file_name" %in% properties & "file_size" %in% properties & "md5sum" %in% properties & "dcf_indexd_guid" %in% properties){
     file_req_props=c("file_name","file_size","file_type","md5sum","file_url_in_cds","dcf_indexd_guid")
     required_properties=unique(c(required_properties,file_req_props))
   }
@@ -283,7 +283,7 @@ for (node in nodes_present){
       }
     }else{
       missing_req_props=required_properties[!required_properties %in% colnames(df)]
-      cat("\tERROR: For the node, ", node, " there are missing required columns: ",paste(missing_req_props,collapse = ", "),"\n",sep = "")
+      cat("\tERROR: For the node, ", node, " there are missing required columns: ",paste(missing_req_props,collapse = ", ",sep = ""),"\n",sep = "")
     }
   }
   
@@ -406,29 +406,41 @@ for (node in nodes_present){
 
 #################
 #
-# Participant check
+# Unique Key check
 #
 #################
 
-cat("\n\nThe following will check for errors, multiples of a participant with different values, in the participant list.\nIf there are any unexpected values, they will be reported below:\n----------")
+cat("\n\nThe following will check for multiples of key values, which are expected to be unique.\nIf there are any unexpected values, they will be reported below:\n----------")
 
-df=workbook_list['participant'][[1]]
-participant_list=unique(df$participant_id)
+#for each node create a data frame to check
+for (node in nodes_present){
+  cat("\n",node,"\n",sep = "")
+  #initialize data frames and properties for tests
+  df=workbook_list[node][[1]]
+  properties=colnames(df)
 
-for (participant in 1:length(participant_list)){
-  if (length(grep(pattern = TRUE, x = df$participant_id %in% participant_list[participant]))>1){
-    cat("\nWARNING: The following participant_id, ", participant_list[participant],", is seen multiple times within the participant node.\n", sep = "")
-    gender=unique(df$gender[df$participant_id %in% participant_list[participant]])
-    ethnicity=unique(df$ethnicity[df$participant_id %in% participant_list[participant]])
-    race=unique(df$race[df$participant_id %in% participant_list[participant]])
-    if (length(gender)>1){
-      cat("\tERROR: The following participant_id, ",participant_list[participant],", is linked to more than one value for gender.\n",sep = "" )
-    }
-    if (length(ethnicity)>1){
-      cat(paste("\tERROR: The following participant_id, ",participant_list[participant],", is linked to more than one value for ethnicity.\n",sep = "" ))
-    }
-    if (length(race)>1){
-      cat(paste("\tERROR: The following participant_id, ",participant_list[participant],", is linked to more than one value for race.\n",sep = "" ))
+  #if the node is a file node, set the key value
+  if ("file_url_in_cds" %in% properties & "file_name" %in% properties & "file_size" %in% properties & "md5sum" %in% properties & "dcf_indexd_guid" %in% properties){
+    key_value_prop="dcf_indexd_guid"
+  }else{
+    key_value=df_dict%>%
+      filter(Node==node, Key=="TRUE")
+    
+    key_value_prop=key_value$Property
+  }
+  
+  #check to make sure the key value exists, is not only NA and is the same value if it was unique.
+  if (key_value_prop %in% properties){
+    if (any(!is.na(df[key_value_prop]))){
+      if (dim(df[key_value_prop])[1] != dim(unique(df[key_value_prop]))[1]){
+        cat("\tERROR: The following node, ", node, ", has multiple instances of the same key value, which should be unique, in the property, ", key_value_prop,":\n",sep = "")
+        id_table=as.data.frame(table(df[key_value_prop][[1]]))
+        id_table_gtr1=id_table%>%
+          filter(Freq>1)
+        cat("\t\t",paste(id_table_gtr1$Var1,"\n\t\t",collapse = "",sep = ""),sep = "")
+      }
+    }else {
+      cat("\tERROR: The following node, ", node, ", has no key values in the property, ", key_value_prop,".\n",sep = "")
     }
   }
 }
@@ -451,7 +463,7 @@ for (library_id in unique(df$library_id)){
   if(!is.na(library_id)){
     grep_instances=unique(df$sample.sample_id[grep(pattern = TRUE, x = df$library_id %in% library_id)])
     if (length(grep_instances)>1){
-      cat(paste("\nERROR: The library_id, ",library_id,", has multiple samples associated with it: ", paste(grep_instances,collapse = ", ") ,"\n\tThis setup will cause issues when submitting to SRA.\n",sep = ""))
+      cat("\nERROR: The library_id, ",library_id,", has multiple samples associated with it: \n\t", paste(grep_instances,collapse = "\n\t",sep = "") ,"\n\t\tThis setup will cause issues when submitting to SRA.\n",sep = "")
     }
   }
 }
@@ -490,7 +502,7 @@ for (file_type in file_types){
     
     if (length(sample_id_loc)>1){
       if (!any(sample_id_loc %in% prob_sample_id_locs)){
-        cat("\nWARNING: The sample, ", sample_id, ", has multiple single sample files associated with it. These could cause errors in SRA submissions if this is unexpected.\n",paste("\t",df$file_name[sample_id_loc],collapse = "\n"),sep = "")
+        cat("\nWARNING: The sample, ", sample_id, ", has multiple single sample files associated with it. These could cause errors in SRA submissions if this is unexpected.\n",paste("\t",df$file_name[sample_id_loc],collapse = "\n",sep = ""),sep = "")
       }
       prob_sample_id_locs=c(prob_sample_id_locs, sample_id_loc)
     }
@@ -504,12 +516,12 @@ for (file_type in file_types){
         prob_file_locs=c(prob_file_locs,file_name_loc)
         #If there are multiple samples related to a file, it will note them
         if (length(sample_file_loc)>1){
-          cat("\n\tERROR: There are multiple samples associated with the single sample file, ",file_name,".",paste("\n\t\t",sample_file_loc,collapse = ""), sep = "")
+          cat("\n\tERROR: There are multiple samples associated with the single sample file, ",file_name,".",paste("\n\t\t",sample_file_loc,collapse = "",sep = ""), sep = "")
         }
         
         #If there are multiple url locations to a file, it will note them
         if(length(file_url_file_loc)>1){
-          cat("\n\tWARNING: There are multiple url locations associated with the file, ",file_name,".",paste("\n\t\t",file_url_file_loc,collapse = ""), sep = "")
+          cat("\n\tWARNING: There are multiple url locations associated with the file, ",file_name,".",paste("\n\t\t",file_url_file_loc,collapse = "",sep = ""), sep = "")
         }
       }
     }  
