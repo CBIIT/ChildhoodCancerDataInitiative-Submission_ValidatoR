@@ -41,6 +41,7 @@ The output file can be found here: ChildhoodCancerDataInitiative-Submission_Vali
 
 `Note: The AWS bucket checks will not work with any of the test files, as the files and their locations are fake data`
 
+## Error Messages
 
 |Message|Issue|Likely Fix|
 |-------|-----|----------|
