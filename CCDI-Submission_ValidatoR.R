@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-#Childrens Cancer Data Initiative - Submission ValidatoR v1.0.0
+#Childhood Cancer Data Initiative - Submission ValidatoR v1.0.0
 
 
 ##################
