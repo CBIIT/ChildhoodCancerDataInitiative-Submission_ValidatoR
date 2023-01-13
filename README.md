@@ -1,4 +1,4 @@
-# ChildrensCancerDataInitiative-Submission_ValidatoR.R
+# ChildhoodCancerDataInitiative-Submission_ValidatoR.R
 This takes a CCDI Metadata template file as input and creates an output file basesd on the QC checks.
 
 This R Script takes a data file that is formatted to the [submission template for CCDI](https://github.com/CBIIT/ccdi-model/tree/main/metadata-manifest) as input. It will output a file that describes whether sections of the Metadata table PASS, ERROR or WARNING on the checks.
@@ -36,7 +36,7 @@ The data file is being validated at this time.
 
 Process Complete.
 
-The output file can be found here: ChildrensCancerDataInitiative-Submission_ValidatoR.R/test_files/
+The output file can be found here: ChildhoodCancerDataInitiative-Submission_ValidatoR.R/test_files/
 ```
 
 `Note: The AWS bucket checks will not work with any of the test files, as the files and their locations are fake data`
