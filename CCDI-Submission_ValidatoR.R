@@ -9,7 +9,7 @@
 #
 ##################
 
-#This takes a CCDI Metadata template file as input and creates an output file basesd on the QC checks.
+#This takes a CCDI Metadata template file as input and creates an output file based on the QC checks.
 
 #Run the following command in a terminal where R is installed for help.
 
@@ -61,7 +61,7 @@ option_list = list(
 )
 
 #create list of options and values for file input
-opt_parser = OptionParser(option_list=option_list, description = "\nCCDI-Submission_ValidationR v1.0.1")
+opt_parser = OptionParser(option_list=option_list, description = "\nCCDI-Submission_ValidationR v1.0.2")
 opt = parse_args(opt_parser)
 
 #If no options are presented, return --help, stop and print the following message.
@@ -402,8 +402,17 @@ for (node in nodes_present){
             for (x in 1:length(unique_values)){
               check_value=unique_values[x]
               if (!is.na(check_value)){
-                if (!as.character(check_value)%in%df_all_terms[property][[1]][[1]]){
-                  cat(paste("\tERROR: ",property," property contains a value that is not recognized: ", check_value,"\n",sep = ""))
+                if (!as.character(check_value)%in%df_all_terms[property][[1]][[1]]){3
+                  #Look at Type for the Data Dictionary and break it apart if it is oneOf
+                  oneOf_row=grep(pattern = TRUE, x = df_dict$Property %in% property)
+                  oneOf_check=df_dict[oneOf_row,"Type"]
+                  oneOf_check=stri_split_fixed(str = oneOf_check, pattern = ";")[[1]]
+                  #if any part of the type is a string, then a warning will be thrown, instead of an error.
+                  if (any(tolower(oneOf_check) %in% "string")){
+                    cat(paste("\tWARNING: ",property," property contains a value that is not recognized in the permissable values, but does allow for free text strings: ", check_value,"\n",sep = ""))
+                  }else{
+                    cat(paste("\tERROR: ",property," property contains a value that is not recognized: ", check_value,"\n",sep = ""))
+                  }
                 }
               }
             }
