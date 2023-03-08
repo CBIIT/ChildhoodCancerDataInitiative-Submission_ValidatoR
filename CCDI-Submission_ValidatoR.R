@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-#Childhood Cancer Data Initiative - Submission ValidatoR v1.0.0
+#Childhood Cancer Data Initiative - Submission ValidatoR
 
 
 ##################
@@ -61,7 +61,7 @@ option_list = list(
 )
 
 #create list of options and values for file input
-opt_parser = OptionParser(option_list=option_list, description = "\nCCDI-Submission_ValidationR v1.0.2")
+opt_parser = OptionParser(option_list=option_list, description = "\nCCDI-Submission_ValidationR v1.0.3")
 opt = parse_args(opt_parser)
 
 #If no options are presented, return --help, stop and print the following message.
