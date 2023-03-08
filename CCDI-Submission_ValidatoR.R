@@ -72,8 +72,10 @@ if (is.null(opt$file)&is.null(opt$template)){
 }
 
 #Addition of NULL option for the script as it runs through the CCDI_CDS_Pipeline.
-if (opt$bucket_list=="NO_LIST_PULL_FROM_S3"){
-  opt$bucket_list=NULL
+if (!is.null(opt$bucket_list)){
+  if (opt$bucket_list=="NO_LIST_PULL_FROM_S3"){
+    opt$bucket_list=NULL
+  }
 }
 
 #Data file pathway
@@ -424,6 +426,75 @@ for (node in nodes_present){
     }
   }
 }
+
+
+################
+#
+# Regex Checks
+#
+################
+
+cat("\nThis section will display any values in properties that can accept strings, which are thought to contain PII/PHI based on regex suggestions from dbGaP:\n----------\n")
+
+date_regex=c('(0?[1-9]|1[0-2])[-\\/.](0?[1-9]|[12][0-9]|3[01])[-\\/.](19[0-9]{2}|2[0-9]{3}|[0-9]{2})',
+             '(19[0-9]{2}|2[0-9]{3})[-\\/.](0?[1-9]|1[0-2])[-\\/.](0?[1-9]|[12][0-9]|3[01])',
+             '(0?[1-9]|[12][0-9]|3[01])[\\/](19[0-9]{2}|2[0-9]{3})',
+             '(0?[1-9]|[12][0-9])[\\/]([0-9]{2})',
+             '(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])[0-9]{2}',
+             '(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])19[0-9]{2}',
+             '(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])2[0-9]{3}',
+             '19[0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])',
+             '2[0-9]{3}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])') 
+
+
+#Problematic regex
+#A month name or abbreviation and a 1, 2, or 4-digit number, in either order, separated by some non-letter, non-number characters or not separated, e.g., "JAN '93", "FEB64", "May 3rd" (but not "May be 14").
+#```'[a-zA-Z]{3}[\ ]?([0-9]|[0-9]{2}|[0-9]{4})[a-zA-Z]{0,2}'```
+
+
+socsec_regex=c('[0-9]{3}[-][0-9]{2}[-][0-9]{4}')
+phone_regex=c('[(]?[0-9]{3}[-)\ ][0-9]{3}[-][0-9]{4}')
+zip_regex=c('(^[0-9]{5}$)|(^[0-9]{9}$)|(^[0-9]{5}-[0-9]{4}$)')
+
+string_df=df_dict[tolower(df_dict$Type) %in% "string",]
+
+for (node in unique(string_df$Node)){
+  if (node %in% names(workbook_list)){
+    cat(node,"\n",sep = "")
+    string_props_node=filter(string_df, Node==node)
+    string_props=string_props_node$Property
+    for (string in string_props){
+      string_values=unique(workbook_list[node][[1]][string][[1]])
+      if(any(!is.na(string_values))){
+        for (value in string_values){
+          date_hit=sapply(date_regex, function(z) grep(pattern=z, x = value))
+          date_hit=unlist(date_hit)
+          socsec_hit=grep(pattern = socsec_regex, x = value)
+          phone_hit=grep(pattern = phone_regex, x = value)
+          zip_hit=grep(pattern = zip_regex, x = value)
+          
+          if (length(date_hit)!=0){
+            cat(paste("\tWARNING: The following property, ",string,", contains a value based on the regex, '",names(date_hit)[1] ,"', that could be interpreted as a date: ",value,"\n",sep = ""))
+          }
+          
+          if (length(socsec_hit)!=0){
+            cat(paste("\tWARNING: The following property, ",string,", contains a value based on the regex, '",socsec_regex ,"', that could be interpreted as a social security number: ",value,"\n",sep = ""))
+          }
+          
+          if (length(phone_hit)!=0){
+            cat(paste("\tWARNING: The following property, ",string,", contains a value based on the regex, '",phone_regex ,"', that could be interpreted as a phone number: ",value,"\n",sep = ""))
+          }
+          
+          if (length(zip_hit)!=0){
+            cat(paste("\tWARNING: The following property, ",string,", contains a value based on the regex, '",zip_regex ,"', that could be interpreted as a zip code: ",value,"\n",sep = ""))
+          }
+        }
+      }
+    }
+    cat('\n')
+  }
+}
+
 
 #################
 #
