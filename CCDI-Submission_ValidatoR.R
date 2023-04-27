@@ -511,15 +511,12 @@ for (node in nodes_present){
   df=workbook_list[node][[1]]
   properties=colnames(df)
 
-  #if the node is a file node, set the key value
-  if ("file_url_in_cds" %in% properties & "file_name" %in% properties & "file_size" %in% properties & "md5sum" %in% properties & "dcf_indexd_guid" %in% properties){
-    key_value_prop="dcf_indexd_guid"
-  }else{
-    key_value=df_dict%>%
-      filter(Node==node, Key=="TRUE")
-    
-    key_value_prop=key_value$Property
-  }
+  #obtain the key value property
+  key_value=df_dict%>%
+    filter(Node==node, Key=="TRUE")
+  
+  key_value_prop=key_value$Property
+  
   
   #check to make sure the key value exists, is not only NA and is the same value if it was unique.
   if (key_value_prop %in% properties){
@@ -750,7 +747,7 @@ for (bucket_num in 1:dim(df_bucket)[1]){
     #if the file is found, find that file with the correct size
     if (length(file_name_loc)!=0){
       if (bucket_metadata[file_name_loc,'file_size']!=as.character(df_bucket_specific[row,'file_size'][[1]])){
-        cat(paste("\tERROR: The following file does not have the same file size found in the AWS bucket: ", df_bucket_specific[row,'file_url_in_cds'][[1]],"\n", sep = ""))
+        cat(paste("\tERROR: The following file does not have the same file size found in the AWS bucket: ", df_bucket_specific[row,'file_url_in_cds'][[1]],"\n\t\tBucket:",bucket_metadata[file_name_loc,'file_size']," != Manifest:",as.character(df_bucket_specific[row,'file_size'][[1]]),"\n", sep = ""))
       }
     }else{
       cat(paste("\tERROR: The following file is not found in the AWS bucket: ", df_bucket_specific[row,'file_url_in_cds'][[1]],"\n", sep = ""))
