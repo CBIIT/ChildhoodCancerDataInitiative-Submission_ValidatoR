@@ -463,6 +463,16 @@ for (node in unique(string_df$Node)){
     cat(node,"\n",sep = "")
     string_props_node=filter(string_df, Node==node)
     string_props=string_props_node$Property
+    
+    #logic to remove both GUID and md5sum from the check, as these are random/semi-random strings that are created and would never have a date placed in them.
+    if ("md5sum" %in% string_props){
+      string_props=string_props[! (string_props %in% 'md5sum')]
+    }
+    
+    if ("dcf_indexd_guid" %in% string_props){
+      string_props=string_props[! (string_props %in% 'dcf_indexd_guid')]
+    }
+    
     for (string in string_props){
       string_values=unique(workbook_list[node][[1]][string][[1]])
       if(any(!is.na(string_values))){
@@ -779,6 +789,7 @@ for (node in nodes_present){
   link_props_pos=grep(pattern = "\\.", x = colnames(df))
   link_props=colnames(df)[link_props_pos]
   
+  #test for multiple links on different nodes
   if (length(link_props)>1){
     for (row in 1:dim(df)[1]){
       num_of_links=length(grep(pattern = TRUE, x = !is.na(df[row,link_props_pos])))
@@ -799,6 +810,17 @@ for (node in nodes_present){
       linking_prop=stri_split_fixed(str = link_prop,pattern = ".",n = 2)[[1]][2]
       df_link=workbook_list[linking_node][[1]]
       linking_values=unique(df_link[linking_prop][[1]])
+      
+      #if there an array in the linking values, break them apart to handle each one independently.
+      for (link_value in link_values){
+        if (grepl(pattern = ";", x = link_value)){
+          value_split= unlist(stri_split_fixed(str = link_value, pattern = ";"))
+          link_values=c(link_values,value_split)
+          link_values=link_values[!(link_values %in% link_value)]
+        }
+        link_values=unique(link_values)
+      }
+      
       matching_links= link_values %in% linking_values
       
       #if not all the values match, determine the mismatched values
