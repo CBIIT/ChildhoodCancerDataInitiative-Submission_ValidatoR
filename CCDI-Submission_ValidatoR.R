@@ -366,7 +366,7 @@ for (node in nodes_present){
   #For the '_id' properties, make sure there are no illegal characters and it only has "Only the following characters can be included in the ID: English letters, Arabic numerals, period (.), hyphen (-), underscore (_), at symbol (@), and the pound sign (#)."
   for (property in properties){
     if (grepl(pattern = "_id", x = property)){
-      bad_id_loc=grep(pattern = FALSE, x = grepl(pattern = '^[a-zA-Z0-9_.@#-]*$', x = df[property][[1]]))
+      bad_id_loc=grep(pattern = FALSE, x = grepl(pattern = '^[a-zA-Z0-9_.@#-;]*$', x = df[property][[1]]))
       if (length(bad_id_loc)>0){
         bad_cols_add=grep(pattern = TRUE, x = colnames(df_req) %in% property)
         bad_cols_all=c(bad_cols_all,bad_cols_add)
