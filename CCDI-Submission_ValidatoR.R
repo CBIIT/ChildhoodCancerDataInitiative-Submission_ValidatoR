@@ -61,7 +61,7 @@ option_list = list(
 )
 
 #create list of options and values for file input
-opt_parser = OptionParser(option_list=option_list, description = "\nCCDI-Submission_ValidationR v1.0.4")
+opt_parser = OptionParser(option_list=option_list, description = "\nCCDI-Submission_ValidationR v1.1.0")
 opt = parse_args(opt_parser)
 
 #If no options are presented, return --help, stop and print the following message.
@@ -255,7 +255,7 @@ for (node in nodes_present){
   df=workbook_list[node][[1]]
   properties=colnames(df)
   df_ws=df
-
+  
   required_properties=df_dict$Property[grepl(pattern = TRUE,x = df_dict$Required %in% node)]
   if ("file_url_in_cds" %in% properties & "file_name" %in% properties & "file_size" %in% properties & "md5sum" %in% properties & "dcf_indexd_guid" %in% properties){
     file_req_props=c("file_name","file_size","file_type","md5sum","file_url_in_cds","dcf_indexd_guid")
@@ -281,18 +281,54 @@ for (node in nodes_present){
     bad_cols_add=c()
     
     if (required_property %in% colnames(df)){
-      
+      error_title=FALSE
+      bad_row_counter=0
       #check for rows that have any NA's or '' blank values
       bad_rows=grep(pattern = TRUE, x = !grepl(pattern = ".", x = df_req[required_property][[1]]))
       if (required_property=="dcf_indexd_guid" & length(bad_rows)==dim(df_req)[1]){
+        
+        #if it is a guid property
         bad_cols_add=grep(pattern = TRUE, x = colnames(df_req) %in% required_property)
         bad_cols_all=c(bad_cols_all,bad_cols_add)
         cat("\tERROR: For the node, ",node,", values still need to be generated for the required property, ", required_property,".\n", sep = "")
       }else if (length(bad_rows)>0){
+        
+        #if it is not a guid
         bad_cols_add=grep(pattern = TRUE, x = colnames(df_req) %in% required_property)
         bad_cols_all=c(bad_cols_all,bad_cols_add)
-        for (bad_row in bad_rows){
-          cat("\tERROR: There is a missing value for the node, ",node,", in the required property, ", required_property,", on row: ", bad_row+1,"\n", sep = "")
+        
+        #if all rows are bad, just call the entire property
+        if (length(bad_rows)==dim(df_req)[1]){
+          cat("\tERROR: The values for the node, ",node,", in the required property, ", required_property,", are missing.","\n", sep = "")
+        }else{
+          
+          #if only some rows are bad
+          for (bad_row in bad_rows){
+            #if this is the first time through the extended information, output this line
+            if (!error_title){
+              cat("\tERROR: There are missing values for the node, ",node,", in the required property, ", required_property,", on the following rows: \n\t\t", sep = "")
+              error_title=TRUE
+              bad_row_indent_counter=0
+            }
+            #create a cleaner list, where ther are line break to number lists.
+            bad_row_indent_counter=bad_row_indent_counter+1
+            #note the bad row
+            cat(bad_row+1, sep = "")
+            #if it is the last instance of the bad row, do a return for next property
+            if (bad_row == bad_rows[length(bad_rows)]){
+              cat('\n',sep = "")
+              #reset counter to make sure no strange formats
+              bad_row_indent_counter=0
+              #otherwise, give a comma and output next row.
+            }else{
+              cat(", ", sep = "")
+            }
+            #if the counter hits the value, a new line and tabs will be made to keep the list organized, and the counter is reset.
+            if (bad_row_indent_counter==25){
+              cat("\n\t\t",sep = "")
+              bad_row_indent_counter=0
+            }
+          }
         }
       }
     }else{
@@ -301,12 +337,14 @@ for (node in nodes_present){
     }
   }
   
+  
   #Check for white space in all values
   for (property in properties){
     
     #initialize possible bad rows/cols
     bad_rows=c()
     bad_cols_add=c()
+    error_title=FALSE
     
     for (x in 1:dim(df[property])[1]){
       df_ws[property][x,]=trimws(df[property][x,])
@@ -322,7 +360,31 @@ for (node in nodes_present){
         }
         for (bad_row in bad_rows){
           if (!all(is.na(df[bad_row,property]))){
-            cat(paste("\tERROR: For the node, ", node,", leading/trailing white space was found in the property, ",property,", on row: ", bad_row+1,"\n", sep = ""))
+            
+            #If there are bad rows, print them out
+            if (!error_title){
+              cat("\tERROR: For the node, ", node,", leading/trailing white space was found in the property, ",property,", on the following rows: \n\t\t", sep = "")
+              error_title=TRUE
+              bad_row_indent_counter=0
+            }
+            #create a cleaner list, where ther are line break to number lists.
+            bad_row_indent_counter=bad_row_indent_counter+1
+            #note the bad row
+            cat(bad_row+1, sep = "")
+            #if it is the last instance of the bad row, do a return for next property
+            if (bad_row == bad_rows[length(bad_rows)]){
+              cat('\n',sep = "")
+              #reset counter to make sure no strange formats
+              bad_row_indent_counter=0
+              #otherwise, give a comma and output next row.
+            }else{
+              cat(", ", sep = "")
+            }
+            #if the counter hits the value, a new line and tabs will be made to keep the list organized, and the counter is reset.
+            if (bad_row_indent_counter==25){
+              cat("\n\t\t",sep = "")
+              bad_row_indent_counter=0
+            }
           }
         }
       }
@@ -342,7 +404,6 @@ for (node in nodes_present){
     for (pass_col in pass_cols){
       cat("\tPASS: For the node, ", node,", the required property, ",pass_col,", contains values for all expected entries.\n",sep = "")
     }
-    #cat("\n")
   }
 }
 
@@ -460,7 +521,6 @@ string_df=df_dict[tolower(df_dict$Type) %in% "string",]
 
 for (node in unique(string_df$Node)){
   if (node %in% names(workbook_list)){
-    cat(node,"\n",sep = "")
     string_props_node=filter(string_df, Node==node)
     string_props=string_props_node$Property
     
@@ -474,6 +534,7 @@ for (node in unique(string_df$Node)){
     }
     
     for (string in string_props){
+      error_title=FALSE
       string_values=unique(workbook_list[node][[1]][string][[1]])
       if(any(!is.na(string_values))){
         for (value in string_values){
@@ -483,25 +544,44 @@ for (node in unique(string_df$Node)){
           phone_hit=grep(pattern = phone_regex, x = value)
           zip_hit=grep(pattern = zip_regex, x = value)
           
-          if (length(date_hit)!=0){
-            cat(paste("\tWARNING: The following property, ",string,", contains a value based on the regex, '",names(date_hit)[1] ,"', that could be interpreted as a date: ",value,"\n",sep = ""))
+          #if there is any hit
+          if (any(length(date_hit)!=0 |
+                  length(socsec_hit)!=0 | 
+                  length(phone_hit)!=0 |
+                  length(zip_hit)!=0)){
+            
+            #If there are bad rows, print them out
+            if (!error_title){
+              cat(node,"\n",sep = "")
+              cat(paste("\tWARNING: The following property, ",string,", in the node, ",node ,", contains a value that could be interpreted as a date/social security number/phone number/zip code: \n\t\t",sep = ""))
+              error_title=TRUE
+              bad_row_indent_counter=0
+            }
+            #create a cleaner list, where ther are line break to number lists.
+            bad_row_indent_counter=bad_row_indent_counter+1
+            #value location
+            bad_row=grep(pattern = TRUE, x = string_values %in% value)
+            #note the bad row
+            cat(bad_row+1, sep = "")
+            #if it is the last instance of the bad row, do a return for next property
+            if (value == string_values[length(string_values)]){
+              cat('\n',sep = "")
+              #reset counter to make sure no strange formats
+              bad_row_indent_counter=0
+              #otherwise, give a comma and output next row.
+            }else{
+              cat(", ", sep = "")
+            }
+            #if the counter hits the value, a new line and tabs will be made to keep the list organized, and the counter is reset.
+            if (bad_row_indent_counter==25){
+              cat("\n\t\t",sep = "")
+              bad_row_indent_counter=0
+            }
           }
-          
-          if (length(socsec_hit)!=0){
-            cat(paste("\tWARNING: The following property, ",string,", contains a value based on the regex, '",socsec_regex ,"', that could be interpreted as a social security number: ",value,"\n",sep = ""))
-          }
-          
-          if (length(phone_hit)!=0){
-            cat(paste("\tWARNING: The following property, ",string,", contains a value based on the regex, '",phone_regex ,"', that could be interpreted as a phone number: ",value,"\n",sep = ""))
-          }
-          
-          if (length(zip_hit)!=0){
-            cat(paste("\tWARNING: The following property, ",string,", contains a value based on the regex, '",zip_regex ,"', that could be interpreted as a zip code: ",value,"\n",sep = ""))
-          }
+          # cat('\n')
         }
       }
     }
-    cat('\n')
   }
 }
 
@@ -516,7 +596,6 @@ cat("\n\nThe following will check for multiples of key values, which are expecte
 
 #for each node create a data frame to check
 for (node in nodes_present){
-  cat("\n",node,"\n",sep = "")
   #initialize data frames and properties for tests
   df=workbook_list[node][[1]]
   properties=colnames(df)
@@ -532,6 +611,7 @@ for (node in nodes_present){
   if (key_value_prop %in% properties){
     if (any(!is.na(df[key_value_prop]))){
       if (dim(df[key_value_prop])[1] != dim(unique(df[key_value_prop]))[1]){
+        cat("\n",node,"\n",sep = "")
         cat("\tERROR: The following node, ", node, ", has multiple instances of the same key value, which should be unique, in the property, ", key_value_prop,":\n",sep = "")
         id_table=as.data.frame(table(df[key_value_prop][[1]]))
         id_table_gtr1=id_table%>%
@@ -539,6 +619,7 @@ for (node in nodes_present){
         cat("\t\t",paste(id_table_gtr1$Var1,"\n\t\t",collapse = "",sep = ""),sep = "")
       }
     }else {
+      cat("\n",node,"\n",sep = "")
       cat("\tERROR: The following node, ", node, ", has no key values in the property, ", key_value_prop,".\n",sep = "")
     }
   }
@@ -557,12 +638,22 @@ cat("\n\nThis submission and subsequent submission files derived from this templ
 df=workbook_list['sequencing_file'][[1]]
 library_id_list=unique(df$library_id)
 
+error_title=FALSE
 #For each library_id check to see how many instances it is found.
 for (library_id in unique(df$library_id)){
   if(!is.na(library_id)){
     grep_instances=unique(df$sample.sample_id[grep(pattern = TRUE, x = df$library_id %in% library_id)])
     if (length(grep_instances)>1){
-      cat("\nERROR: The library_id, ",library_id,", has multiple samples associated with it: \n\t", paste(grep_instances,collapse = "\n\t",sep = "") ,"\n\t\tThis setup will cause issues when submitting to SRA.\n",sep = "")
+      
+      #If there are bad rows, print them out
+      if (!error_title){
+        cat(paste("\nERROR: A library_id has multiple samples associated with it.\n\tThis setup will cause issues when submitting to SRA.\n",sep = ""))
+        error_title=TRUE
+      }
+      
+      #note the library_id and associated samples
+      cat("\n\tlibrary_id: ",library_id,"\n\t\tsample.sample_id: ",paste(grep_instances,collapse = ", ",sep = ""), sep = "")
+
     }
   }
 }
@@ -578,85 +669,139 @@ for (library_id in unique(df$library_id)){
 
 cat("\n\nThis submission and subsequent submission files derived from the sequencing file template assume that FASTQ, BAM and CRAM files are single sample files, and contain all associated metadata for submission.\nIf there are any unexpected values, they will be reported below:\n----------")
 
-#obtain df for seq files
-df=workbook_list['sequencing_file'][[1]]
-library_id_list=unique(df$library_id)
 
 #Gather all file types.
-file_types=c("bam","cram","fastq")
-prob_sample_id_locs=c()
-prob_file_locs=c()
+file_types=c("fasta","fastq","bam","cram")
 
-#For each position, check to see if there are any samples that share the same library_id and make sure that the values for the required properties for SRA submission are present.      
-for (file_type in file_types){
-  single_sample_seq_files=grep(pattern = TRUE, x = tolower(df$file_type) %in% file_type)
-  for (file_location in single_sample_seq_files){
-    sample_id=unique(df$sample.sample_id[file_location])
-    file_url=unique(df$file_url_in_cds[file_location])
-    file_name=unique(df$file_name[file_location])
-    sample_id_loc=unique(grep(pattern = TRUE, x = (df$sample.sample_id %in% sample_id)))
-    sample_id_loc=sample_id_loc[grep(pattern=TRUE, x = (df$file_type[sample_id_loc] %in% file_types))]
-    file_url_loc=unique(grep(pattern = TRUE, x = (df$file_url_in_cds %in% file_url)))
-    file_name_loc=unique(grep(pattern = TRUE, x = (df$file_name %in% file_name)))
-    
-    if (length(sample_id_loc)>1){
-      if (!any(sample_id_loc %in% prob_sample_id_locs)){
-        cat("\nWARNING: The sample, ", sample_id, ", has multiple single sample files associated with it. These could cause errors in SRA submissions if this is unexpected.\n",paste("\t",df$file_name[sample_id_loc],collapse = "\n",sep = ""),sep = "")
-      }
-      prob_sample_id_locs=c(prob_sample_id_locs, sample_id_loc)
-    }
-    
-    #if there are any urls or files 
-    if (any(length(file_url_loc)>1 | length(file_name_loc)>1)){
-      if (!any(file_name_loc %in% prob_file_locs)){
-      cat("\nWARNING: The following file, ", file_name, ", is found multiple times.",sep = "")
-        sample_file_loc=unique(df$sample.sample_id[file_name_loc])
-        file_url_file_loc=unique(df$file_url_in_cds[file_name_loc])
-        prob_file_locs=c(prob_file_locs,file_name_loc)
-        #If there are multiple samples related to a file, it will note them
-        if (length(sample_file_loc)>1){
-          cat("\n\tERROR: There are multiple samples associated with the single sample file, ",file_name,".",paste("\n\t\t",sample_file_loc,collapse = "",sep = ""), sep = "")
-        }
+#sequencing nodes
+seq_nodes=c()
+for (node in nodes_present){
+  node_cols=names(workbook_list[node][[1]])
+  if (all('library_id' %in% node_cols & 'library_selection' %in% node_cols)){
+    seq_nodes=c(seq_nodes, node)
+  }
+}
+
+for (node in seq_nodes){
+  #print node
+  cat("\n",node,"\n",sep = "")
+  
+  #obtain df for seq files
+  df=workbook_list[node][[1]]
+  library_id_list=unique(df$library_id)
+  
+  prob_sample_id_locs=c()
+  prob_file_locs=c()
+  
+  
+  #For each position, check to see if there are any samples that share the same library_id and make sure that the values for the required properties for SRA submission are present.      
+  for (file_type in file_types){
+    #determine if that file type is present
+    single_sample_seq_files=grep(pattern = TRUE, x = tolower(df$file_type) %in% file_type)
+    #as long as there is a value.
+    if (length(single_sample_seq_files)>0){
+      #print file type
+      cat("\n\t",file_type,sep = "")
+      
+      #handle multiple files for a single sample
+      error_title=FALSE
+      for (file_location in single_sample_seq_files){
+        sample_id=unique(df$sample.sample_id[file_location])
         
-        #If there are multiple url locations to a file, it will note them
-        if(length(file_url_file_loc)>1){
-          cat("\n\tWARNING: There are multiple url locations associated with the file, ",file_name,".",paste("\n\t\t",file_url_file_loc,collapse = "",sep = ""), sep = "")
+        sample_id_loc=unique(grep(pattern = TRUE, x = (df$sample.sample_id %in% sample_id)))
+        sample_id_loc=sample_id_loc[grep(pattern=TRUE, x = (df$file_type[sample_id_loc] %in% file_types))]
+        
+        if (length(sample_id_loc)>1){
+          #If there are multiple file for a sample, print them out
+          if (!error_title){
+            cat(paste("\n\t\tWARNING: A sample has multiple single sample files associated with it. These could cause errors in SRA submissions if this is unexpected.",sep = ""))
+            error_title=TRUE
+          }
+          
+          #if the sample is not already found in the problem samples (to remove redundancy)
+          if (!any(sample_id_loc %in% prob_sample_id_locs)){
+            cat("\n\t\t\tsample_id: ", sample_id, "\n\t\t\t\tfile_names: ",paste(df$file_name[sample_id_loc],collapse = ", ",sep = ""),sep = "")
+          }
+          prob_sample_id_locs=c(prob_sample_id_locs, sample_id_loc)
         }
       }
-    }  
-    
-    #Check to see if the expected SRA metadata is present for the files going to the SRA submission.
-    bases_check= df$number_of_bp[file_location]
-    avg_read_length_check=df$avg_read_length[file_location]
-    coverage_check=df$coverage[file_location]
-    reads_check=df$number_of_reads[file_location]
-    #for fastq files, skips the checks for coverage values to be present
-    if (file_type=="fastq"){
-      SRA_checks=c(bases_check, avg_read_length_check, reads_check)
-      if (any(is.na(SRA_checks))){
-        cat(paste("\nERROR: The file, ",df$file_name[file_location],", is missing at least one expected value (bases, avg_read_length, number_of_reads) that is associated with an SRA submission.",sep = ""))
+      
+      
+      #handle multiple files and file locations (urls)
+      error_title=FALSE
+      for (file_location in single_sample_seq_files){
+        
+        #find file name and url, plus possible other locations
+        file_url=unique(df$file_url_in_cds[file_location])
+        file_name=unique(df$file_name[file_location])
+        file_url_loc=unique(grep(pattern = TRUE, x = (df$file_url_in_cds %in% file_url)))
+        file_name_loc=unique(grep(pattern = TRUE, x = (df$file_name %in% file_name)))
+        
+        #if there are multiple positions for any urls or files 
+        if (any(length(file_url_loc)>1 | length(file_name_loc)>1)){
+          
+          #If there are multiple files or urls, print them out
+          if (!error_title){
+            cat(paste("\n\t\tWARNING: The following file was found multiple times and there is a possibility that a file was found at different file urls.",sep = ""))
+            error_title=TRUE
+          }
+          
+          #if the file is not found already in the problem files (to remove redundancy)
+          if (!any(file_name_loc %in% prob_file_locs)){
+            cat("\n\t\t\tfile_name: ", file_name,sep = "")
+            file_url_file_loc=unique(df$file_url_in_cds[file_name_loc])
+            prob_file_locs=c(prob_file_locs,file_name_loc)
+            
+            #If there are multiple url locations to a file, it will note them
+            if(length(file_url_file_loc)>1){
+              cat("\n\t\t\t\turls: ",paste(file_url_file_loc,collapse = ", "), sep = "")
+            }
+          }
+        }  
       }
-      if (!is.na(coverage_check)){
-        cat(paste("\nWARNING: The file, ",df$file_name[file_location],", is not expected to have a coverage value.",sep = ""))
-      }
-      #for RNA-seq data, skips the checks for coverage values to be present
-    }else if(!is.na(df$library_strategy[file_location]) &
-             tolower(df$library_strategy[file_location])=="rna-seq"){
-      SRA_checks=c(bases_check, avg_read_length_check, reads_check)
-      if (any(is.na(SRA_checks))){
-        cat(paste("\nERROR: The file, ",df$file_name[file_location],", is missing at least one expected value (bases, avg_read_length, number_of_reads) that is associated with an SRA submission.\n",sep = ""))
-      }
-      if (!is.na(coverage_check)){
-        cat(paste("\nWARNING: The file, ",df$file_name[file_location],", is not expected to have a coverage value.",sep = ""))
-      }
-    }else{
-      SRA_checks=c(bases_check, avg_read_length_check, coverage_check, reads_check)
-      if (any(is.na(SRA_checks))){
-        cat(paste("\nERROR: The file, ",df$file_name[file_location],", is missing at least one expected value (bases, avg_read_length, coverage, number_of_reads) that is associated with an SRA submission.",sep = ""))
+      
+      
+      
+      #handle SRA expected data checks
+      error_title=FALSE
+      for (file_location in single_sample_seq_files){
+        #Check to see if the expected SRA metadata is present for the files going to the SRA submission.
+        bases_check= df$number_of_bp[file_location]
+        avg_read_length_check=df$avg_read_length[file_location]
+        coverage_check=df$coverage[file_location]
+        reads_check=df$number_of_reads[file_location]
+        #for fastq files, skips the checks for coverage values to be present
+        if (file_type=="fastq"){
+          SRA_checks=c(bases_check, avg_read_length_check, reads_check)
+          if (any(is.na(SRA_checks))){
+            cat(paste("\n\t\tERROR: The file, ",df$file_name[file_location],", is missing at least one expected value (bases, avg_read_length, number_of_reads) that is associated with an SRA submission.",sep = ""))
+          }
+          if (!is.na(coverage_check)){
+            cat(paste("\n\t\tWARNING: The file, ",df$file_name[file_location],", is not expected to have a coverage value.",sep = ""))
+          }
+          #for RNA-seq data, skips the checks for coverage values to be present
+        }else if(!is.na(df$library_strategy[file_location]) &
+                 tolower(df$library_strategy[file_location])=="rna-seq"){
+          SRA_checks=c(bases_check, avg_read_length_check, reads_check)
+          if (any(is.na(SRA_checks))){
+            cat(paste("\n\t\tERROR: The file, ",df$file_name[file_location],", is missing at least one expected value (bases, avg_read_length, number_of_reads) that is associated with an SRA submission.\n",sep = ""))
+          }
+          if (!is.na(coverage_check)){
+            cat(paste("\n\t\tWARNING: The file, ",df$file_name[file_location],", is not expected to have a coverage value.",sep = ""))
+          }
+        }else{
+          SRA_checks=c(bases_check, avg_read_length_check, coverage_check, reads_check)
+          if (any(is.na(SRA_checks))){
+            cat(paste("\n\t\tERROR: The file, ",df$file_name[file_location],", is missing at least one expected value (bases, avg_read_length, coverage, number_of_reads) that is associated with an SRA submission.",sep = ""))
+          }
+          
+        }
       }
     }
   }
+  cat('\n')
 }
+
 
 
 #################
@@ -719,7 +864,7 @@ df_bucket=unique(df_bucket)
 
 #Check to see if there is only one bucket associated with the submission. It is not required, but it is likely that there would only be one bucket.
 if (dim(df_bucket)[1]>1){
-  cat(paste("\tWARNING: There is more than one aws bucket that is associated with this metadata file in the, ",node,", node: ", df_bucket$bucket,".\n",sep = ""))
+  cat(paste("\tWARNING: There is more than one aws bucket that is associated with this metadata submission file:\n\t\t", paste(df_bucket$bucket, collapse = ", "),".\n",sep = ""))
   if (!is.null(opt$bucket_list)){
     cat(paste("\tWARNING: A bucket list was supplied, it will need to contain all the bucket's files in that one list.\n",sep = ""))
   }
