@@ -310,7 +310,7 @@ for (node in nodes_present){
               error_title=TRUE
               bad_row_indent_counter=0
             }
-            #create a cleaner list, where ther are line break to number lists.
+            #create a cleaner list, where there are line break to number lists.
             bad_row_indent_counter=bad_row_indent_counter+1
             #note the bad row
             cat(bad_row+1, sep = "")
@@ -367,7 +367,7 @@ for (node in nodes_present){
               error_title=TRUE
               bad_row_indent_counter=0
             }
-            #create a cleaner list, where ther are line break to number lists.
+            #create a cleaner list, where there are line break to number lists.
             bad_row_indent_counter=bad_row_indent_counter+1
             #note the bad row
             cat(bad_row+1, sep = "")
@@ -557,7 +557,7 @@ for (node in unique(string_df$Node)){
               error_title=TRUE
               bad_row_indent_counter=0
             }
-            #create a cleaner list, where ther are line break to number lists.
+            #create a cleaner list, where there are line break to number lists.
             bad_row_indent_counter=bad_row_indent_counter+1
             #value location
             bad_row=grep(pattern = TRUE, x = string_values %in% value)
