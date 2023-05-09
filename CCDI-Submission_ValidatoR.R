@@ -552,8 +552,7 @@ for (node in unique(string_df$Node)){
             
             #If there are bad rows, print them out
             if (!error_title){
-              cat(node,"\n",sep = "")
-              cat(paste("\tWARNING: The following property, ",string,", in the node, ",node ,", contains a value that could be interpreted as a date/social security number/phone number/zip code: \n\t\t",sep = ""))
+              cat(paste('\n',node,"\n\tWARNING: The following property, ",string,", in the node, ",node ,", contains a value that could be interpreted as a date/social security number/phone number/zip code: \n\t\t",sep = ""))
               error_title=TRUE
               bad_row_indent_counter=0
             }
