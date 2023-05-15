@@ -816,15 +816,15 @@ node_props=names(unlist(x = workbook_list, recursive = FALSE))
 file_nodes=node_props[grep(pattern = "file_url_in_cds", x = node_props)]
 file_nodes=unique(unlist(stri_split_fixed(str = file_nodes, pattern = ".",n = 2)))
 file_nodes=file_nodes[!grepl(pattern = "file_url_in_cds", x = file_nodes)]
-df_file=data.frame(matrix(ncol = 4,nrow = 0))
-colnames(df_file)<-c("file_size","md5sum","file_url_in_cds","type")
+df_file=data.frame(matrix(ncol = 5,nrow = 0))
+colnames(df_file)<-c("file_name","file_size","md5sum","file_url_in_cds","type")
 
 for (node in file_nodes){
   #obtain df for files
   df=workbook_list[node][[1]]
   df$type=node
   df=df%>%
-    select(file_size, md5sum,file_url_in_cds,type)
+    select(file_name,file_size, md5sum,file_url_in_cds,type)
   df_file=rbind(df_file,df)
 }
   
@@ -838,13 +838,16 @@ for (node in file_nodes){
 for (row_pos in 1:dim(df_file)[1]){
   if (!is.na(df_file$file_size[row_pos])){
     if (df_file$file_size[row_pos]==0){
-      cat(paste("\tWARNING: The file in row ",row_pos+1,", has a size value of 0. Please make sure that this is a correct value for the file.\n",sep = ""))
+      cat(paste("\tWARNING: The file ",df_file$file_name[row_pos],", has a size value of 0. Please make sure that this is a correct value for the file.\n",sep = ""))
     }
   }
   if (!is.na(df_file$md5sum[row_pos])){
     if (!stri_detect_regex(str = df_file$md5sum[row_pos],pattern = '^[a-f0-9]{32}$',case_insensitive=TRUE)){
-      cat(paste("\tERROR: The file in row ",row_pos+1,", has a md5sum value that does not follow the md5sum regular expression.\n",sep = ""))
+      cat(paste("\tERROR: The file ",df_file$file_name[row_pos],", has a md5sum value that does not follow the md5sum regular expression.\n",sep = ""))
     }
+  }
+  if (df_file$file_name[row_pos]!=basename(df_file$file_url_in_cds[row_pos])){
+    cat(paste("\tERROR: The file ",df_file$file_name[row_pos],", has a file_name that does not match the file_name in the url.\n",sep = ""))
   }
 }
 
