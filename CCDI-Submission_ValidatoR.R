@@ -687,7 +687,7 @@ for (node in seq_nodes){
   
   #obtain df for seq files
   df=workbook_list[node][[1]]
-  library_id_list=unique(df$library_id)
+  #library_id_list=unique(df$library_id)
   
   prob_sample_id_locs=c()
   prob_file_locs=c()
