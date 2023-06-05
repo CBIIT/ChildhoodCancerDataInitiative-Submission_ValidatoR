@@ -10,6 +10,7 @@ parser = argparse.ArgumentParser(
                     )
 
 parser.add_argument( '-s', '--s3_bucket', help="The s3 bucket location, in the format of 'bucket' when compared to the url of 's3://bucket/name/here/'")
+parser.add_argument( '-p', '--s3_profile', help="The s3 bucket profile associated with the access to the s3 bucket.",default='default')
 parser.add_argument( '-o', '--output', help="The directory location of the output file. The default is the current directory.",default="./")
 
 argcomplete.autocomplete(parser)
@@ -25,6 +26,7 @@ def refresh_date():
 #pull in args as variables
 s3_bucket=args.s3_bucket
 output=args.output
+profile=args.s3_profile
 output=os.path.abspath(output)
 
 
@@ -42,7 +44,7 @@ if output[len(output)-1]!="/":
 date=refresh_date()
 
 #Get s3 session setup
-session=boto3.Session()
+session=boto3.Session(profile_name=profile)
 
 s3=session.resource('s3')
 
