@@ -975,7 +975,7 @@ for (node in nodes_present){
       if (!all(matching_links)){
         mis_match_value=grep(pattern = FALSE, x = matching_links)
         
-        #for each mismatched value, throw and error.
+        #for each mismatched value, throw an error.
         for (mis_match in mis_match_value){
           mis_match_text=link_values[mis_match]
           cat("\tERROR: For the node, ",node,", the following linking property, ", link_prop,", has a value that is not found in the parent node: ", mis_match_text,"\n",sep = "")
