@@ -537,6 +537,7 @@ for (node in unique(string_df$Node)){
       error_title=FALSE
       string_values=unique(workbook_list[node][[1]][string][[1]])
       if(any(!is.na(string_values))){
+        string_values=string_values[!is.na(string_values)]
         for (value in string_values){
           date_hit=sapply(date_regex, function(z) grep(pattern=z, x = value))
           date_hit=unlist(date_hit)
