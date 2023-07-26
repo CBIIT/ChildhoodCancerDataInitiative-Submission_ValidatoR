@@ -472,7 +472,7 @@ for (node in nodes_present){
                   oneOf_check=stri_split_fixed(str = oneOf_check, pattern = ";")[[1]]
                   #if any part of the type is a string, then a warning will be thrown, instead of an error.
                   if (any(tolower(oneOf_check) %in% "string")){
-                    cat(paste("\tWARNING: ",property," property contains a value that is not recognized in the permissable values, but does allow for free text strings: ", check_value,"\n",sep = ""))
+                    cat(paste("\tWARNING: ",property," property contains a value that is not recognized in the permissible values, but does allow for free text strings: ", check_value,"\n",sep = ""))
                   }else{
                     cat(paste("\tERROR: ",property," property contains a value that is not recognized: ", check_value,"\n",sep = ""))
                   }
