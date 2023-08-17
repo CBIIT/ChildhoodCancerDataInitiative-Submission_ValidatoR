@@ -12,7 +12,7 @@ Rscript --vanilla CCDI-Submission_ValidatoR.R -h
 ```
 Usage: CCDI-Submission_ValidatoR.R [options]
 
-CCDI-Submission_ValidationR v1.1.1
+CCDI-Submission_ValidationR v1.1.2
 
 Options:
 	-f CHARACTER, --file=CHARACTER
