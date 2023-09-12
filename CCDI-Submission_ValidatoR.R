@@ -1010,8 +1010,12 @@ for (row_pos in 1:dim(df_file)[1]){
       cat(paste("\tERROR: The file ",df_file$file_name[row_pos],", has a md5sum value that does not follow the md5sum regular expression.\n",sep = ""))
     }
   }
-  if (df_file$file_name[row_pos]!=basename(df_file$file_url_in_cds[row_pos])){
-    cat(paste("\tERROR: The file ",df_file$file_name[row_pos],", has a file_name that does not match the file_name in the url.\n",sep = ""))
+  if (!is.na(df_file$file_url_in_cds[row_pos])){
+    if (df_file$file_name[row_pos]!=basename(df_file$file_url_in_cds[row_pos])){
+      cat(paste("\tERROR: The file ",df_file$file_name[row_pos],", has a file_name that does not match the file_name in the url.\n",sep = ""))
+    }
+  }else{
+    cat(paste("\tERROR: The file ",df_file$file_name[row_pos],", has a blank url path in the 'file_url_in_cds' property.\n",sep = ""))
   }
 }
 
