@@ -1031,6 +1031,7 @@ df_bucket=select(df_file, file_url_in_cds)%>%
   separate(file_url_in_cds,into = c("s3","blank","bucket","the_rest"),sep = "/",extra = "merge")%>%
   select(-s3,-blank,-the_rest)
 df_bucket=unique(df_bucket)
+df_bucket=df_bucket[!is.na(df_bucket)]
 
 #Check to see if there is only one bucket associated with the submission. It is not required, but it is likely that there would only be one bucket.
 if (dim(df_bucket)[1]>1){
