@@ -1045,7 +1045,7 @@ if (length(df_bucket)>1){
 for (bucket_num in 1:length(df_bucket)){
   #pull bucket metadata
   if (is.null(opt$bucket_list)){
-    metadata_files=suppressMessages(suppressWarnings(system(command = paste("aws s3 ls --recursive s3://", df_bucket[bucket_num,],"/",sep = ""),intern = TRUE)))
+    metadata_files=suppressMessages(suppressWarnings(system(command = paste("aws s3 ls --recursive s3://", df_bucket[bucket_num],"/",sep = ""),intern = TRUE)))
     
     #fix bucket metadata to have fixed delimiters of one space
     while (any(grepl(pattern = "  ",x = metadata_files))==TRUE){
@@ -1056,12 +1056,12 @@ for (bucket_num in 1:length(df_bucket)){
     bucket_metadata=data.frame(all_metadata=metadata_files)
     bucket_metadata=separate(bucket_metadata, all_metadata, into = c("date","time","file_size","file_path"),sep = " ", extra = "merge")%>%
       select(-date, -time)%>%
-      mutate(file_path=paste("s3://",df_bucket[bucket_num,],"/",file_path,sep = ""))
+      mutate(file_path=paste("s3://",df_bucket[bucket_num],"/",file_path,sep = ""))
     
   }else if (!is.null(opt$bucket_list)){
     bucket_metadata=suppressMessages(read_tsv(file = bucket_list_path, col_names = F))
     colnames(bucket_metadata)<-c("file_size","file_path")
-    bucket_metadata=mutate(bucket_metadata, file_path=paste("s3://",df_bucket[bucket_num,],"/",file_path,sep = ""))
+    bucket_metadata=mutate(bucket_metadata, file_path=paste("s3://",df_bucket[bucket_num],"/",file_path,sep = ""))
   }
   
   bucket_metadata$file_size=as.character(bucket_metadata$file_size)
