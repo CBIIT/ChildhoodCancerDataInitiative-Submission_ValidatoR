@@ -1034,7 +1034,7 @@ df_bucket=unique(df_bucket)
 df_bucket=df_bucket[!is.na(df_bucket)]
 
 #Check to see if there is only one bucket associated with the submission. It is not required, but it is likely that there would only be one bucket.
-if (dim(df_bucket)[1]>1){
+if (length(df_bucket)>1){
   cat(paste("\tWARNING: There is more than one aws bucket that is associated with this metadata submission file:\n\t\t", paste(df_bucket$bucket, collapse = ", "),".\n",sep = ""))
   if (!is.null(opt$bucket_list)){
     cat(paste("\tWARNING: A bucket list was supplied, it will need to contain all the bucket's files in that one list.\n",sep = ""))
@@ -1042,7 +1042,7 @@ if (dim(df_bucket)[1]>1){
 }
 
 #Do a list of the bucket and then check the file size and name against the metadata submission.
-for (bucket_num in 1:dim(df_bucket)[1]){
+for (bucket_num in 1:length(df_bucket)){
   #pull bucket metadata
   if (is.null(opt$bucket_list)){
     metadata_files=suppressMessages(suppressWarnings(system(command = paste("aws s3 ls --recursive s3://", df_bucket[bucket_num,],"/",sep = ""),intern = TRUE)))
@@ -1065,7 +1065,7 @@ for (bucket_num in 1:dim(df_bucket)[1]){
   }
   
   bucket_metadata$file_size=as.character(bucket_metadata$file_size)
-  df_bucket_specific=df_file[grep(pattern = df_bucket[bucket_num,], x = df_file$file_url_in_cds),]
+  df_bucket_specific=df_file[grep(pattern = df_bucket[bucket_num], x = df_file$file_url_in_cds),]
   
   #For each row in the manifest for this bucket, check the contents of the bucket against the manifest.
   for (row in 1:dim(df_bucket_specific)[1]){
